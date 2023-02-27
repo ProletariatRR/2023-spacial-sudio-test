@@ -1,39 +1,57 @@
-"""PyAudio Example: Play a wave file (callback version)."""
-
-import wave
-import time
-import sys
-
 import pyaudio
+import wave
 
+import numpy as np
+from matplotlib import pyplot as plt
+import struct
+
+import time
 
 filename = f"./voiceData/breathy_voice.wav"
+plt.ion()# Create a figure and a set of subplots.
+figure, ax = plt.subplots()# return AxesImage object for using.
+lines, = ax.plot([], [])
+ax.set_autoscaley_on(True)
+ax.set_ylim(0, 1)
+ax.grid()
+    
+xdata = np.linspace(0,1023)
 
-with wave.open(filename, 'rb') as wf:
-    # Define callback for playback (1)
-    def callback(in_data, frame_count, time_info, status):
-        data = wf.readframes(frame_count)
-        # print((frame_count))
-        # If len(data) is less than requested frame_count, PyAudio automatically
-        # assumes the stream is finished, and the stream stops.
-        return (data, pyaudio.paContinue)
 
-    # Instantiate PyAudio and initialize PortAudio system resources (2)
-    p = pyaudio.PyAudio()
+def callback(in_data, frame_count, time_info, status):
 
-    # Open stream using callback (3)
-    stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-                    channels=wf.getnchannels(),
-                    rate=wf.getframerate(),
+    ydata = np.frombuffer(in_data, dtype=np.int16)
+
+    # lines.set_xdata(xdata)
+    # lines.set_ydata(ydata)
+    # #Need both of these in order to rescale
+    # ax.relim()
+    # ax.autoscale_view()
+    # # draw and flush the figure .
+    figure.canvas.draw()
+    figure.canvas.flush_events()
+
+    return (in_data, pyaudio.paContinue)
+
+  
+p = pyaudio.PyAudio()
+
+
+stream = p.open(
+                    format=pyaudio.paInt16,
+                    channels=1,
+                    rate=44100,
                     output=True,
-                    stream_callback=callback)
+                    input=True,
+                    frames_per_buffer=1024,
+                    stream_callback=callback
+                )
 
-    # Wait for stream to finish (4)
-    while stream.is_active():
-        time.sleep(0.1)
+while stream.is_active() :
+    time.sleep(0.1)
 
     # Close the stream (5)
-    stream.close()
+stream.close()
 
     # Release PortAudio system resources (6)
-    p.terminate()
+p.terminate()
