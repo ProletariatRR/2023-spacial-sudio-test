@@ -2,19 +2,28 @@ from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.shaders import lit_with_shadows_shader
 
-from panda3d.core import Texture
+# from panda3d.core import Texture
 
 import pyaudio
 
-# from panda3d.core import PStatClient
+# import librosa
 
-# PStatClient.connect() # 占用分析
+
+ # 性能占用分析
+# from panda3d.core import PStatClient
+# PStatClient.connect()
 
 
 class FPP(FirstPersonController):
     def __init__(self, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
 
+    @property
+    def speed_factor(self):
+        if held_keys['shift'] == True:
+            return 1.5
+        else:
+            return 1
 
     def update(self):
         self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity[1]
@@ -30,7 +39,7 @@ class FPP(FirstPersonController):
         feet_ray = raycast(self.position+Vec3(0,0.5,0), self.direction, ignore=(self,), distance=.5, debug=False)
         head_ray = raycast(self.position+Vec3(0,self.height-.1,0), self.direction, ignore=(self,), distance=.5, debug=False)
         if not feet_ray.hit and not head_ray.hit:
-            move_amount = self.direction * time.dt * self.speed
+            move_amount = self.direction * time.dt * self.speed * self.speed_factor
 
             if raycast(self.position+Vec3(-.0,1,0), Vec3(1,0,0), distance=.5, ignore=(self,)).hit:
                 move_amount[0] = min(move_amount[0], 0)
@@ -64,40 +73,6 @@ class FPP(FirstPersonController):
             # if not on ground and not on way up in jump, fall
             self.y -= min(self.air_time, ray.distance-.05) * time.dt * 100
             self.air_time += time.dt * .25 * self.gravity
-
-
-    def input(self, key):
-        if key == 'space':
-            self.jump()
-
-
-    def jump(self):
-        if not self.grounded:
-            return
-
-        self.grounded = False
-        self.animate_y(self.y+self.jump_height, self.jump_up_duration, resolution=int(1//time.dt), curve=curve.out_expo)
-        invoke(self.start_fall, delay=self.fall_after)
-
-
-    def start_fall(self):
-        self.y_animator.pause()
-        self.jumping = False
-
-    def land(self):
-        # print('land')
-        self.air_time = 0
-        self.grounded = True
-
-
-    def on_enable(self):
-        mouse.locked = True
-        self.cursor.enabled = True
-
-
-    def on_disable(self):
-        mouse.locked = False
-        self.cursor.enabled = False
 
 
 app = Ursina()
@@ -151,15 +126,13 @@ stream = p.open(
                     rate=44100,
                     output=True,
                     input=True,
-                    frames_per_buffer=32e,
+                    frames_per_buffer=32,
                     stream_callback=callback
                 )
 
 
 app.run()
 
-
+# release audio source
 stream.close()
-
-    # Release PortAudio system resources (6)
 p.terminate()
