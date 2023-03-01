@@ -103,7 +103,8 @@ def update():
     '''
     global x, y, z 
     x, y, z = player.position[0], player.position[1], player.position[2]
-    # time.sleep(dtime)
+    # if time.dt <= dtime:
+    #     time.sleep(dtime-time.dt)
     pass
 
 
@@ -112,7 +113,6 @@ def callback(in_data, frame_count, time_info, status):
     # audio frame update function
     '''
     # print(round(x,1),round(y,1),round(z,1))
-
 
     return (in_data, pyaudio.paContinue)
 
